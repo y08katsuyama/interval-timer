@@ -104,10 +104,9 @@
 </head>
 <body>
 
-    <div class="version-badge">v1.8</div>
+    <div class="version-badge">v1.9</div>
 
     <div class="container">
-        <!-- 見た目をすっきりした縦並びの入力フォームに戻しました -->
         <div class="settings-panel" id="settingsPanel">
             <div class="setting-item">
                 <label for="workInput">作業時間 (秒):</label>
@@ -172,7 +171,7 @@
             updateDisplay();
         }
 
-        function playTone(freq, duration, type = 'sine') {
+        function beep() {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 if (!AudioContext) return;
@@ -182,27 +181,16 @@
                 }
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.value = freq;
+                osc.type = 'sine';
+                osc.frequency.value = 800;
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-                osc.stop(audioCtx.currentTime + duration);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
+                osc.stop(audioCtx.currentTime + 0.2);
             } catch (e) {}
-        }
-
-        function beep() {
-            playTone(800, 0.2, 'sine');
             if (navigator.vibrate) {
                 navigator.vibrate(200);
-            }
-        }
-
-        function timeUpAlert() {
-            playTone(1200, 0.5, 'square');
-            if (navigator.vibrate) {
-                navigator.vibrate([300, 100, 300]);
             }
         }
 
@@ -230,28 +218,27 @@
                 timerId = setInterval(() => {
                     if (currentTime > 0) {
                         currentTime--;
-                        updateDisplay();
-
-                        if (currentTime === 0) {
-                            timeUpAlert();
-                        } else if (currentTime <= 3) {
+                        if (currentTime <= 3 && currentTime > 0) {
                             beep();
                         }
+                        updateDisplay();
                     } else {
-                        // フェーズ切り替え
+                        // 0秒になった瞬間（フェーズ切り替わり時）にブザーを鳴らす
+                        beep();
+
                         if (isWorkPhase) {
                             if (restTime > 0) {
                                 isWorkPhase = false;
                                 statusText.innerText = '休憩中';
                                 statusText.style.color = '#ff5252';
                                 currentTime = restTime;
-                                updateDisplay();
                             } else {
                                 moveToNextSetOrFinish();
                             }
                         } else {
                             moveToNextSetOrFinish();
                         }
+                        updateDisplay();
                     }
                 }, 1000);
             }
@@ -264,7 +251,6 @@
                 statusText.innerText = '作業中！';
                 statusText.style.color = '#00e676';
                 currentTime = workTime;
-                updateDisplay();
             } else {
                 clearInterval(timerId);
                 isRunning = false;
@@ -288,4 +274,13 @@
             statusText.style.color = '#00e676';
             mainBtn.innerText = 'スタート';
             mainBtn.className = 'btn-start';
-            workInp
+            workInput.disabled = false;
+            restInput.disabled = false;
+            setInput.disabled = false;
+            updateDisplay();
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>
