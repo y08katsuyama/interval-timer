@@ -17,6 +17,19 @@
             margin: 0;
             padding: 20px;
             box-sizing: border-box;
+            position: relative; /* バージョン表示の基準位置 */
+        }
+        /* 右上のバージョン表示 */
+        .version-badge {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 0.8rem;
+            color: #666;
+            background-color: #1e1e1e;
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #333;
         }
         .container {
             text-align: center;
@@ -97,6 +110,9 @@
 </head>
 <body>
 
+    <!-- 右上のバージョン表示 -->
+    <div class="version-badge">v1.6</div>
+
     <div class="container">
         <div class="settings-panel" id="settingsPanel">
             <div class="setting-row">
@@ -166,7 +182,6 @@
             updateDisplay();
         }
 
-        // 安全に音声を再生する共通関数
         function playTone(freq, duration, type = 'sine') {
             try {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -184,9 +199,7 @@
                 osc.start();
                 gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
                 osc.stop(audioCtx.currentTime + duration);
-            } catch (e) {
-                // 万が一の音声エラーでもタイマー処理が止まらないようにガード
-            }
+            } catch (e) {}
         }
 
         function beep() {
@@ -235,7 +248,6 @@
                             beep();
                         }
                     } else {
-                        // フェーズ切り替え処理
                         if (isWorkPhase) {
                             if (restTime > 0) {
                                 isWorkPhase = false;
@@ -280,11 +292,4 @@
             isWorkPhase = true;
             currentSet = 1;
             workTime = Math.max(1, parseInt(workInput.value) || 30);
-            currentTime = workTime;
-            statusText.innerText = '準備完了';
-            statusText.style.color = '#00e676';
-            mainBtn.innerText = 'スタート';
-            mainBtn.className = 'btn-start';
-            workInput.disabled = false;
-            restInput.disabled = false;
-            setInput.disabled = false;
+            curr
