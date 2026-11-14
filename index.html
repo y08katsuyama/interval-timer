@@ -23,7 +23,6 @@
             width: 100%;
             max-width: 400px;
         }
-        /* 手書きメモに合わせた設定パネルのレイアウト */
         .settings-panel {
             background-color: #1e1e1e;
             padding: 15px;
@@ -99,7 +98,6 @@
 <body>
 
     <div class="container">
-        <!-- 手書きメモを再現した設定入力エリア -->
         <div class="settings-panel" id="settingsPanel">
             <div class="setting-row">
                 <div class="setting-field">
@@ -158,9 +156,9 @@
 
         function applySettings() {
             if (isRunning) return; 
-            workTime = parseInt(workInput.value) || 30;
-            restTime = parseInt(restInput.value) || 10;
-            totalSets = parseInt(setInput.value) || 8;
+            workTime = Math.max(1, parseInt(workInput.value) || 30);
+            restTime = Math.max(0, parseInt(restInput.value) || 0);
+            totalSets = Math.max(1, parseInt(setInput.value) || 1);
             
             if (isWorkPhase && currentSet === 1) {
                 currentTime = workTime;
@@ -168,39 +166,38 @@
             updateDisplay();
         }
 
-        // カウントダウン中のビープ音（残り3秒など）
-        function beep() {
+        // 安全に音声を再生する共通関数
+        function playTone(freq, duration, type = 'sine') {
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const audioCtx = new AudioContext();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = 800;
+                osc.type = type;
+                osc.frequency.value = freq;
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
-                osc.stop(audioCtx.currentTime + 0.2);
-            } catch (e) {}
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                // 万が一の音声エラーでもタイマー処理が止まらないようにガード
+            }
+        }
+
+        function beep() {
+            playTone(800, 0.2, 'sine');
             if (navigator.vibrate) {
                 navigator.vibrate(200);
             }
         }
 
-        // カウントが0になった瞬間のタイムアップブザー
         function timeUpAlert() {
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'square';
-                osc.frequency.value = 1200;
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
-                osc.stop(audioCtx.currentTime + 0.5);
-            } catch (e) {}
+            playTone(1200, 0.5, 'square');
             if (navigator.vibrate) {
                 navigator.vibrate([300, 100, 300]);
             }
@@ -216,9 +213,9 @@
                 restInput.disabled = false;
                 setInput.disabled = false;
             } else {
-                workTime = parseInt(workInput.value) || 30;
-                restTime = parseInt(restInput.value) || 10;
-                totalSets = parseInt(setInput.value) || 8;
+                workTime = Math.max(1, parseInt(workInput.value) || 30);
+                restTime = Math.max(0, parseInt(restInput.value) || 0);
+                totalSets = Math.max(1, parseInt(setInput.value) || 1);
 
                 isRunning = true;
                 mainBtn.innerText = '一時停止';
@@ -232,43 +229,48 @@
                         currentTime--;
                         updateDisplay();
 
-                        // 0になった瞬間（00:00になったとき）
                         if (currentTime === 0) {
                             timeUpAlert();
-                        } 
-                        // 残り1〜3秒のときのカウントダウン音
-                        else if (currentTime <= 3) {
+                        } else if (currentTime <= 3) {
                             beep();
                         }
                     } else {
-                        // 0秒表示の次のインターバルでフェーズを切り替える
+                        // フェーズ切り替え処理
                         if (isWorkPhase) {
-                            isWorkPhase = false;
-                            statusText.innerText = '休憩中';
-                            statusText.style.color = '#ff5252';
-                            currentTime = restTime;
-                        } else {
-                            if (currentSet < totalSets) {
-                                currentSet++;
-                                isWorkPhase = true;
-                                statusText.innerText = '作業中！';
-                                statusText.style.color = '#00e676';
-                                currentTime = workTime;
+                            if (restTime > 0) {
+                                isWorkPhase = false;
+                                statusText.innerText = '休憩中';
+                                statusText.style.color = '#ff5252';
+                                currentTime = restTime;
+                                updateDisplay();
                             } else {
-                                clearInterval(timerId);
-                                isRunning = false;
-                                statusText.innerText = '完了！お疲れ様でした';
-                                mainBtn.innerText = 'スタート';
-                                mainBtn.className = 'btn-start';
-                                workInput.disabled = false;
-                                restInput.disabled = false;
-                                setInput.disabled = false;
-                                return;
+                                moveToNextSetOrFinish();
                             }
+                        } else {
+                            moveToNextSetOrFinish();
                         }
-                        updateDisplay();
                     }
                 }, 1000);
+            }
+        }
+
+        function moveToNextSetOrFinish() {
+            if (currentSet < totalSets) {
+                currentSet++;
+                isWorkPhase = true;
+                statusText.innerText = '作業中！';
+                statusText.style.color = '#00e676';
+                currentTime = workTime;
+                updateDisplay();
+            } else {
+                clearInterval(timerId);
+                isRunning = false;
+                statusText.innerText = '完了！お疲れ様でした';
+                mainBtn.innerText = 'スタート';
+                mainBtn.className = 'btn-start';
+                workInput.disabled = false;
+                restInput.disabled = false;
+                setInput.disabled = false;
             }
         }
 
@@ -277,6 +279,12 @@
             isRunning = false;
             isWorkPhase = true;
             currentSet = 1;
-            workTime = parseInt(workInput.value) || 30;
+            workTime = Math.max(1, parseInt(workInput.value) || 30);
             currentTime = workTime;
-            statusText.inn
+            statusText.innerText = '準備完了';
+            statusText.style.color = '#00e676';
+            mainBtn.innerText = 'スタート';
+            mainBtn.className = 'btn-start';
+            workInput.disabled = false;
+            restInput.disabled = false;
+            setInput.disabled = false;
