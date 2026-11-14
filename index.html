@@ -93,7 +93,6 @@
 <body>
 
     <div class="container">
-        <!-- oninputに変更し、入力と同時に反映されるように修正 -->
         <div class="settings-panel" id="settingsPanel">
             <div class="setting-item">
                 <label for="workInput">作業時間 (秒):</label>
@@ -152,13 +151,13 @@
             restTime = parseInt(restInput.value) || 10;
             totalSets = parseInt(setInput.value) || 8;
             
-            // 待機中であれば、変更した作業時間を即座にタイマー表示に反映する
             if (isWorkPhase && currentSet === 1) {
                 currentTime = workTime;
             }
             updateDisplay();
         }
 
+        // 通常のビープ音（カウントダウン用）
         function beep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -177,6 +176,26 @@
             }
         }
 
+        // タイムアップ時（0秒）の強調したブザー音と長めのバイブレーション
+        function timeUpAlert() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square'; // 少し目立つ音色
+                osc.frequency.value = 1200; // 高めの音
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+                osc.stop(audioCtx.currentTime + 0.5);
+            } catch (e) {}
+            if (navigator.vibrate) {
+                // ブルッ、ブルッ、と強めに2回振動させる
+                navigator.vibrate([300, 100, 300]);
+            }
+        }
+
         function toggleTimer() {
             if (isRunning) {
                 clearInterval(timerId);
@@ -187,7 +206,6 @@
                 restInput.disabled = false;
                 setInput.disabled = false;
             } else {
-                // スタートを押した瞬間にも最新の入力値を確実に取得
                 workTime = parseInt(workInput.value) || 30;
                 restTime = parseInt(restInput.value) || 10;
                 totalSets = parseInt(setInput.value) || 8;
@@ -203,11 +221,13 @@
                     if (currentTime > 0) {
                         currentTime--;
                         if (currentTime <= 3 && currentTime > 0) {
-                            beep();
+                            beep(); // 残り3秒のカウントダウン音
                         }
                         updateDisplay();
                     } else {
-                        beep();
+                        // タイムアップ（0秒になった瞬間）
+                        timeUpAlert(); 
+
                         if (isWorkPhase) {
                             isWorkPhase = false;
                             statusText.innerText = '休憩中';
