@@ -1,286 +1,184 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>トレーニングインターバルタイマー</title>
-
-<style>
-*{
-    box-sizing:border-box;
-    margin:0;
-    padding:0;
-    font-family:sans-serif;
-}
-
-body{
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    transition:.3s;
-    background:#222;
-    color:white;
-}
-
-.container{
-    width:95%;
-    max-width:450px;
-    text-align:center;
-}
-
-h1{
-    margin-bottom:20px;
-}
-
-.settings{
-    display:grid;
-    gap:10px;
-    margin-bottom:25px;
-}
-
-label{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-input{
-    width:100px;
-    padding:8px;
-    font-size:18px;
-}
-
-.status{
-    font-size:32px;
-    font-weight:bold;
-    margin:10px 0;
-}
-
-.timer{
-    font-size:90px;
-    font-weight:bold;
-    margin:20px 0;
-}
-
-.sets{
-    font-size:24px;
-    margin-bottom:20px;
-}
-
-.buttons{
-    display:flex;
-    gap:10px;
-}
-
-button{
-    flex:1;
-    padding:15px;
-    font-size:18px;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-}
-
-.start{
-    background:#28a745;
-    color:#fff;
-}
-
-.pause{
-    background:#ffc107;
-}
-
-.reset{
-    background:#dc3545;
-    color:#fff;
-}
-
-.work{
-    background:#b30000;
-}
-
-.rest{
-    background:#0047ab;
-}
-
-.ready{
-    background:#555;
-}
-
-.finish{
-    background:#008000;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マイ・インターバルタイマー</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        .status {
+            font-size: 1.8rem;
+            color: #00e676;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .timer-display {
+            font-size: 6rem;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+            margin: 20px 0;
+        }
+        .sets {
+            font-size: 1.2rem;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+            flex: 1;
+        }
+        .btn-start { background-color: #00e676; color: #121212; }
+        .btn-stop { background-color: #ff5252; }
+        .btn-reset { background-color: #424242; }
+    </style>
 </head>
-<body class="ready">
+<body>
 
-<div class="container">
-    <h1>💪 インターバルタイマー</h1>
-
-    <div class="settings">
-
-        <label>
-            準備時間(秒)
-            <input id="readyTime" type="number" value="5">
-        </label>
-
-        <label>
-            運動時間(秒)
-            <input id="workTime" type="number" value="30">
-        </label>
-
-        <label>
-            休憩時間(秒)
-            <input id="restTime" type="number" value="15">
-        </label>
-
-        <label>
-            セット数
-            <input id="totalSets" type="number"
-                   value="10">
-        </label>
+    <div class="container">
+        <div class="status" id="statusText">準備完了</div>
+        <div class="timer-display" id="timeDisplay">00:30</div>
+        <div class="sets" id="setInfo">セット 1 / 8</div>
+        
+        <div class="btn-group">
+            <button class="btn-start" id="mainBtn" onclick="toggleTimer()">スタート</button>
+            <button class="btn-reset" onclick="resetTimer()">リセット</button>
+        </div>
     </div>
 
-    <div class="status" id="status">
-        READY
-    </div>
+    <script>
+        let workTime = 30; // 作業時間（秒）
+        let restTime = 10; // 休憩時間（秒）
+        let totalSets = 8; // 総セット数
+        
+        let currentTime = workTime;
+        let currentSet = 1;
+        let isWorkPhase = true;
+        let timerId = null;
+        let isRunning = false;
 
-    <div class="timer" id="timer">
-        00:05
-    </div>
+        const statusText = document.getElementById('statusText');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const setInfo = document.getElementById('setInfo');
+        const mainBtn = document.getElementById('mainBtn');
 
-    <div class="sets" id="sets">
-        セット 0 / 0
-    </div>
+        function updateDisplay() {
+            let mins = Math.floor(currentTime / 60);
+            let secs = currentTime % 60;
+            timeDisplay.innerText = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+            setInfo.innerText = `セット ${currentSet} / ${totalSets}`;
+        }
 
-    <div class="buttons">
-        <button class="start" onclick="startTimer()">開始</button>
-        <button class="pause" onclick="pauseTimer()">一時停止</button>
-        <button class="reset" onclick="resetTimer()">リセット</button>
-    </div>
-</div>
+        function beep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 800;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                // 修正：audioCtx.after のタイポを修正
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.2);
+                osc.stop(audioCtx.currentTime + 0.2);
+            } catch (e) {
+                // AudioContext未対応ブラウザ対策
+            }
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+        }
 
-<script>
-let phase = "ready";
-let currentSet = 1;
-let timer;
-let timeLeft = 0;
-let running = false;
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerId);
+                isRunning = false;
+                mainBtn.innerText = 'スタート';
+                mainBtn.className = 'btn-start';
+            } else {
+                isRunning = true;
+                mainBtn.innerText = '一時停止';
+                mainBtn.className = 'btn-stop';
+                
+                timerId = setInterval(() => {
+                    if (currentTime > 0) {
+                        currentTime--;
+                        if (currentTime <= 3 && currentTime > 0) {
+                            beep();
+                        }
+                        updateDisplay();
+                    } else {
+                        beep();
+                        // 状態の切り替え
+                        if (isWorkPhase) {
+                            isWorkPhase = false;
+                            statusText.innerText = '休憩中';
+                            statusText.style.color = '#ff5252';
+                            currentTime = restTime;
+                        } else {
+                            if (currentSet < totalSets) {
+                                currentSet++;
+                                isWorkPhase = true;
+                                statusText.innerText = '作業中！';
+                                statusText.style.color = '#00e676';
+                                currentTime = workTime;
+                            } else {
+                                clearInterval(timerId);
+                                isRunning = false;
+                                statusText.innerText = '完了！お疲れ様でした';
+                                mainBtn.innerText = 'スタート';
+                                mainBtn.className = 'btn-start';
+                                return;
+                            }
+                        }
+                        updateDisplay();
+                    }
+                }, 1000);
+            }
+        }
 
-const audioCtx =
-window.AudioContext ?
-new AudioContext() :
-new webkitAudioContext();
-
-function beep(freq=800,duration=200){
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.frequency.value=freq;
-    osc.type="sine";
-
-    osc.start();
-
-    gain.gain.setValueAtTime(
-        0.2,
-        audioCtx.currentTime
-    );
-
-    osc.stop(
-        audioCtx.currentTime + duration/1000
-    );
-}
-
-function vibrate(ms=300){
-    if(navigator.vibrate){
-        navigator.vibrate(ms);
-    }
-}
-
-function format(sec){
-    const m =
-    String(Math.floor(sec/60)).padStart(2,'0');
-    const s =
-    String(sec%60).padStart(2,'0');
-
-    return `${m}:${s}`;
-}
-
-function updateDisplay(){
-    document.getElementById("timer")
-        .textContent = format(timeLeft);
-}
-
-function startTimer(){
-
-    if(running) return;
-
-    if(timeLeft===0){
-
-        phase="ready";
-
-        currentSet=1;
-
-        timeLeft=parseInt(
-            document.getElementById(
-                "readyTime"
-            ).value
-        );
-
-        document.getElementById("sets")
-            .textContent=
-            `セット ${currentSet} / ${
-            document.getElementById(
-            "totalSets").value}`;
-    }
-
-    running=true;
-
-    timer=setInterval(()=>{
-        timeLeft--;
+        function resetTimer() {
+            clearInterval(timerId);
+            isRunning = false;
+            isWorkPhase = true;
+            currentSet = 1;
+            currentTime = workTime;
+            statusText.innerText = '準備完了';
+            statusText.style.color = '#00e676';
+            mainBtn.innerText = 'スタート';
+            mainBtn.className = 'btn-start';
+            updateDisplay();
+        }
 
         updateDisplay();
-
-        if(timeLeft<=3 && timeLeft>0){
-            beep(1200,100);
-        }
-
-        if(timeLeft<=0){
-            nextPhase();
-        }
-
-    },1000);
-
-}
-
-function nextPhase(){
-
-    clearInterval(timer);
-
-    beep(900,400);
-    vibrate(250);
-
-    const workTime = parseInt(
-    document.getElementById(
-    "workTime").value);
-
-    const restTime = parseInt(
-    document.getElementById(
-    "restTime").value);
-
-    const totalSets = parseInt(
-    document.getElementById(
-    "totalSets").value);
-
-    if(phase==="ready"){
-
-        phase="work";
-        document.body.className="work";
-        document.getElementById("status")
-            .textContent="WORK";
-
-  
+    </script>
+</body>
+</html>
