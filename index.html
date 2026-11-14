@@ -17,9 +17,8 @@
             margin: 0;
             padding: 20px;
             box-sizing: border-box;
-            position: relative; /* バージョン表示の基準位置 */
+            position: relative;
         }
-        /* 右上のバージョン表示 */
         .version-badge {
             position: absolute;
             top: 15px;
@@ -110,8 +109,7 @@
 </head>
 <body>
 
-    <!-- 右上のバージョン表示 -->
-    <div class="version-badge">v1.6</div>
+    <div class="version-badge">v1.7</div>
 
     <div class="container">
         <div class="settings-panel" id="settingsPanel">
@@ -238,14 +236,16 @@
                 setInput.disabled = true;
                 
                 timerId = setInterval(() => {
+                    if (currentTime > 1 && currentTime <= 3) {
+                        beep();
+                    }
+
                     if (currentTime > 0) {
                         currentTime--;
                         updateDisplay();
-
+                        
                         if (currentTime === 0) {
                             timeUpAlert();
-                        } else if (currentTime <= 3) {
-                            beep();
                         }
                     } else {
                         if (isWorkPhase) {
@@ -292,4 +292,4 @@
             isWorkPhase = true;
             currentSet = 1;
             workTime = Math.max(1, parseInt(workInput.value) || 30);
-            curr
+            currentTime = workTim
